@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase-client";
+// import { supabase } from "@/lib/supabase-client";
 import type { MembershipTier } from "@/lib/membership";
 
 type MembershipInfo = {
@@ -13,8 +13,27 @@ type MembershipInfo = {
 
 /**
  * 사용자 멤버십 상태 훅
+ *
+ * [전면 무료화 모드]
+ * 실제 DB 조회 로직을 주석 처리하고 항상 premium 반환.
+ * 나중에 과금 복원 시 아래 주석만 해제하면 됨.
  */
 export function useMembership(userId: string) {
+  // ── 전면 무료화: 항상 premium ──
+  const [membership] = useState<MembershipInfo>({
+    tier: "premium",
+    expiresAt: null,
+    isExpired: false,
+    isPremium: true,
+  });
+  const [loading] = useState(false);
+
+  // 사용하지 않는 파라미터 경고 방지
+  void userId;
+
+  return { ...membership, loading };
+
+  /* ── [과금 복원 시 아래 블록 주석 해제, 위 블록 삭제] ──
   const [membership, setMembership] = useState<MembershipInfo>({
     tier: "free",
     expiresAt: null,
@@ -52,4 +71,5 @@ export function useMembership(userId: string) {
   }, [userId]);
 
   return { ...membership, loading };
+  */
 }

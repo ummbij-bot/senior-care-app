@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowLeft, Pill, CheckCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Pill, CheckCircle, Lock, Crown } from "lucide-react";
 import { useMedicationLogs } from "@/lib/hooks/useMedicationLogs";
+import { useMembership } from "@/lib/hooks/useMembership";
+import { useConfetti } from "@/lib/hooks/useConfetti";
 import MedicationCard from "./MedicationCard";
+
+const FREE_ALERT_LIMIT = 1;
 
 type Props = {
   userId: string;
@@ -19,7 +23,24 @@ type Props = {
 export default function MedicationDashboard({ userId, userName }: Props) {
   const { logs, loading, error, stats, markAsTaken, markAsSkipped } =
     useMedicationLogs(userId);
+  const { isPremium } = useMembership(userId);
+  const { fire } = useConfetti();
   const [processingId, setProcessingId] = useState<string | null>(null);
+
+  // 모든 약 복용 완료 시 대형 폭죽
+  useEffect(() => {
+    if (!loading && stats.taken === stats.total && stats.total > 0) {
+      const timer = setTimeout(() => {
+        fire({
+          particleCount: 150,
+          spread: 120,
+          startVelocity: 40,
+          origin: { y: 0.5 },
+        });
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [stats.taken, stats.total, loading, fire]);
 
   // 복용 처리
   const handleTake = async (logId: string) => {
@@ -118,6 +139,19 @@ export default function MedicationDashboard({ userId, userName }: Props) {
         </div>
       </section>
 
+      {/* ── 무료 제한 배너 ── */}
+      {!isPremium && logs.length > FREE_ALERT_LIMIT && (
+        <div className="mx-5 mt-4 rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-3 sm:mx-8">
+          <p className="text-base font-semibold text-amber-700">
+            💊 무료 회원은 {FREE_ALERT_LIMIT}개 약만 관리할 수 있어요
+          </p>
+          <a href="/pricing" className="mt-1 inline-flex items-center text-base font-bold text-primary hover:underline">
+            <Crown className="mr-1 h-4 w-4" />
+            프리미엄으로 모든 약 관리하기
+          </a>
+        </div>
+      )}
+
       {/* ── 복약 목록 ── */}
       <main className="flex-1 px-5 py-6 sm:px-8">
         {loading ? (
@@ -161,21 +195,47 @@ export default function MedicationDashboard({ userId, userName }: Props) {
                 const order = { pending: 0, missed: 1, taken: 2, skipped: 3 };
                 return order[a.status] - order[b.status];
               })
-              .map((log) => (
-                <MedicationCard
-                  key={log.id}
-                  logId={log.id}
-                  medicationName={log.medications?.name ?? "알 수 없는 약"}
-                  dosage={log.medications?.dosage ?? ""}
-                  scheduleLabel={log.medication_schedules?.label ?? ""}
-                  scheduledTime={log.scheduled_time}
-                  status={log.status}
-                  takenAt={log.taken_at}
-                  onTake={handleTake}
-                  onSkip={handleSkip}
-                  isProcessing={processingId === log.id}
-                />
-              ))}
+              .map((log, index) => {
+                const medLocked = !isPremium && index >= FREE_ALERT_LIMIT;
+
+                if (medLocked) {
+                  return (
+                    <div key={log.id} className="card relative opacity-60">
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-200">
+                          <Lock className="h-6 w-6 text-gray-400" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-lg font-bold text-text-muted">
+                            {log.medications?.name ?? "알 수 없는 약"}
+                          </p>
+                          <p className="text-base text-text-muted">프리미엄 전용</p>
+                        </div>
+                        <a href="/pricing" className="btn btn-outline text-sm">
+                          <Crown className="mr-1 h-4 w-4" />
+                          잠금 해제
+                        </a>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <MedicationCard
+                    key={log.id}
+                    logId={log.id}
+                    medicationName={log.medications?.name ?? "알 수 없는 약"}
+                    dosage={log.medications?.dosage ?? ""}
+                    scheduleLabel={log.medication_schedules?.label ?? ""}
+                    scheduledTime={log.scheduled_time}
+                    status={log.status}
+                    takenAt={log.taken_at}
+                    onTake={handleTake}
+                    onSkip={handleSkip}
+                    isProcessing={processingId === log.id}
+                  />
+                );
+              })}
           </div>
         )}
 

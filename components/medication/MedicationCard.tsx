@@ -1,6 +1,8 @@
 "use client";
 
 import { Check, X, Clock, Pill } from "lucide-react";
+import { useConfetti } from "@/lib/hooks/useConfetti";
+import VoiceMedicationButton from "./VoiceMedicationButton";
 
 type MedicationCardProps = {
   logId: string;
@@ -32,6 +34,14 @@ export default function MedicationCard({
   onSkip,
   isProcessing,
 }: MedicationCardProps) {
+  const { fire } = useConfetti();
+
+  // 폭죽 + 햅틱과 함께 복용 처리
+  const handleTakeWithConfetti = () => {
+    fire();
+    onTake(logId);
+  };
+
   // 시간 포맷 (24시→12시간)
   const formatTime = (time: string) => {
     const [h, m] = time.split(":");
@@ -128,7 +138,7 @@ export default function MedicationCard({
       {status === "pending" && (
         <div className="mt-4 flex gap-3">
           <button
-            onClick={() => onTake(logId)}
+            onClick={handleTakeWithConfetti}
             disabled={isProcessing}
             className="btn btn-primary btn-lg flex-1 text-xl"
             aria-label={`${medicationName} 복용 완료`}
@@ -136,6 +146,14 @@ export default function MedicationCard({
             <Check className="mr-2 h-6 w-6" strokeWidth={2.5} aria-hidden="true" />
             약 먹었어요
           </button>
+
+          {/* 음성 인식 버튼 (지원 브라우저만 표시) */}
+          <VoiceMedicationButton
+            medicationName={medicationName}
+            onConfirmed={handleTakeWithConfetti}
+            disabled={isProcessing}
+          />
+
           <button
             onClick={() => onSkip(logId)}
             disabled={isProcessing}

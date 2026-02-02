@@ -1,7 +1,7 @@
 "use client";
 
-import { Lock, Crown } from "lucide-react";
-import { useMembership } from "@/lib/hooks/useMembership";
+// import { Lock, Crown } from "lucide-react";
+// import { useMembership } from "@/lib/hooks/useMembership";
 
 type Props = {
   userId: string;
@@ -12,15 +12,17 @@ type Props = {
 
 /**
  * 프리미엄 기능 게이트
- * - 프리미엄 사용자: children 렌더링
- * - 무료 사용자: 잠금 화면 + 업그레이드 안내
+ *
+ * [전면 무료화 모드]
+ * 조건 없이 무조건 children 렌더링.
+ * 과금 복원 시 아래 주석 블록으로 교체.
  */
 export default function PremiumGate({
-  userId,
-  featureName,
   children,
-  fallback,
 }: Props) {
+  return <>{children}</>;
+
+  /* ── [과금 복원 시 아래 블록 주석 해제, 위 return 삭제] ──
   const { isPremium, loading } = useMembership(userId);
 
   if (loading) {
@@ -64,4 +66,5 @@ export default function PremiumGate({
       </p>
     </div>
   );
+  */
 }

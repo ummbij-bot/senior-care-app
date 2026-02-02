@@ -1,6 +1,8 @@
 import { Pill, Sun, Music, Phone } from "lucide-react";
 import CurrentTime from "@/components/CurrentTime";
-import MembershipBadge from "@/components/membership/MembershipBadge";
+import FloatingAIButton from "@/components/ai-companion/FloatingAIButton";
+// [전면 무료화] 결제 유도 배지 숨김 - 과금 복원 시 주석 해제
+// import MembershipBadge from "@/components/membership/MembershipBadge";
 
 /* ============================================
    메인 대시보드 카드 데이터
@@ -63,7 +65,9 @@ export default function Home() {
       <header className="px-5 pt-8 pb-6 sm:px-8">
         <div className="flex items-start justify-between">
           <CurrentTime />
+          {/* [전면 무료화] 결제 유도 배지 숨김 - 과금 복원 시 주석 해제
           <MembershipBadge userId={SENIOR_USER_ID} />
+          */}
         </div>
         <h1 className="mt-4 text-3xl font-bold leading-tight text-text-primary sm:text-4xl">
           {userName} 어르신
@@ -89,7 +93,7 @@ export default function Home() {
                     group flex items-center gap-5 rounded-2xl border-2
                     ${card.color.border} ${card.color.bg}
                     p-5 sm:flex-col sm:items-center sm:p-6 sm:text-center
-                    active:scale-[0.98]
+                    active:scale-95
                   `}
                   aria-label={card.label}
                 >
@@ -134,7 +138,7 @@ export default function Home() {
             group flex w-full items-center justify-center gap-4
             rounded-2xl border-3 border-danger bg-red-50
             px-6 py-5
-            active:scale-[0.98]
+            active:scale-95
           `}
           role="button"
           aria-label="긴급 신고 - 119에 전화합니다"
@@ -154,6 +158,9 @@ export default function Home() {
           </div>
         </a>
       </footer>
+
+      {/* AI 손자 플로팅 버튼 */}
+      <FloatingAIButton />
     </div>
   );
 }

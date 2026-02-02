@@ -16,13 +16,13 @@
    CSS Custom Properties (디자인 토큰)
    ============================================ */
 :root {
-  /* --- 컬러 시스템 (고대비 팔레트) --- */
-  --background: #ffffff;
-  --foreground: #1a1a1a;
+  /* --- 컬러 시스템 (Soft Warm 팔레트) --- */
+  --background: #faf8f5;
+  --foreground: #1c1917;
 
   /* Primary: 따뜻하고 신뢰감 있는 파란색 */
-  --primary: #1a56db;
-  --primary-hover: #1444b0;
+  --primary: #2563b0;
+  --primary-hover: #1d4d8f;
   --primary-foreground: #ffffff;
 
   /* Secondary: 부드러운 녹색 (건강/안정) */
@@ -35,8 +35,8 @@
   --danger-hover: #a31919;
   --danger-foreground: #ffffff;
 
-  /* Warning: 주의색 */
-  --warning: #b45309;
+  /* Warning: 따뜻한 주의색 */
+  --warning: #d97706;
   --warning-bg: #fef3c7;
   --warning-foreground: #78350f;
 
@@ -45,39 +45,39 @@
   --success-bg: #d1fae5;
   --success-foreground: #064e3b;
 
-  /* 표면 색상 */
-  --surface: #f9fafb;
-  --surface-raised: #ffffff;
-  --border: #d1d5db;
-  --border-strong: #6b7280;
+  /* 표면 색상 (Warm Tone) */
+  --surface: #f5f2ed;
+  --surface-raised: #fffefa;
+  --border: #d4cfc8;
+  --border-strong: #78716c;
 
-  /* 텍스트 색상 */
-  --text-primary: #111827;
-  --text-secondary: #374151;
-  --text-muted: #6b7280;
+  /* 텍스트 색상 (Stone 계열) */
+  --text-primary: #1c1917;
+  --text-secondary: #44403c;
+  --text-muted: #78716c;
 
   /* 포커스 링 */
-  --focus-ring: #1a56db;
-  --focus-ring-offset: #ffffff;
+  --focus-ring: #2563b0;
+  --focus-ring-offset: #faf8f5;
 }
 
 /* 다크 모드 - 시니어용으로 대비를 더 높임 */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0f0f0f;
-    --foreground: #f5f5f5;
+    --background: #1c1917;
+    --foreground: #fafaf9;
 
-    --primary: #6ea8fe;
-    --primary-hover: #93bfff;
-    --primary-foreground: #0a0a0a;
+    --primary: #7cb3f0;
+    --primary-hover: #a0c8f5;
+    --primary-foreground: #1c1917;
 
     --secondary: #6ee7b7;
     --secondary-hover: #a7f3d0;
-    --secondary-foreground: #0a0a0a;
+    --secondary-foreground: #1c1917;
 
     --danger: #fca5a5;
     --danger-hover: #fecaca;
-    --danger-foreground: #0a0a0a;
+    --danger-foreground: #1c1917;
 
     --warning: #fcd34d;
     --warning-bg: #451a03;
@@ -87,17 +87,17 @@
     --success-bg: #064e3b;
     --success-foreground: #d1fae5;
 
-    --surface: #1a1a1a;
-    --surface-raised: #262626;
-    --border: #404040;
-    --border-strong: #a3a3a3;
+    --surface: #292524;
+    --surface-raised: #44403c;
+    --border: #57534e;
+    --border-strong: #a8a29e;
 
-    --text-primary: #f5f5f5;
-    --text-secondary: #d4d4d4;
-    --text-muted: #a3a3a3;
+    --text-primary: #fafaf9;
+    --text-secondary: #d6d3d1;
+    --text-muted: #a8a29e;
 
-    --focus-ring: #6ea8fe;
-    --focus-ring-offset: #0f0f0f;
+    --focus-ring: #7cb3f0;
+    --focus-ring-offset: #1c1917;
   }
 }
 
@@ -239,7 +239,7 @@ body {
     background-color: var(--primary-hover);
   }
   &:active {
-    transform: scale(0.98);
+    transform: scale(0.95);
   }
 }
 
@@ -250,7 +250,7 @@ body {
     background-color: var(--secondary-hover);
   }
   &:active {
-    transform: scale(0.98);
+    transform: scale(0.95);
   }
 }
 
@@ -262,6 +262,9 @@ body {
     background-color: var(--surface);
     border-color: var(--primary);
   }
+  &:active {
+    transform: scale(0.95);
+  }
 }
 
 @utility btn-danger {
@@ -269,6 +272,9 @@ body {
   color: var(--danger-foreground);
   &:hover {
     background-color: var(--danger-hover);
+  }
+  &:active {
+    transform: scale(0.95);
   }
 }
 
