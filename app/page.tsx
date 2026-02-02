@@ -1,65 +1,159 @@
-import Image from "next/image";
+import { Pill, Sun, Music, Phone } from "lucide-react";
+import CurrentTime from "@/components/CurrentTime";
+import MembershipBadge from "@/components/membership/MembershipBadge";
 
+/* ============================================
+   메인 대시보드 카드 데이터
+   ============================================ */
+const SENIOR_USER_ID = "4b2d8b80-222d-4783-a683-f1e96f1dbac3";
+
+const mainCards = [
+  {
+    id: "medication",
+    icon: Pill,
+    label: "복약 알림",
+    description: "오늘 먹을 약을 확인해요",
+    href: "/medication",
+    color: {
+      bg: "bg-blue-50",
+      iconBg: "bg-primary",
+      iconColor: "text-primary-foreground",
+      border: "border-blue-200",
+    },
+  },
+  {
+    id: "morning",
+    icon: Sun,
+    label: "오늘 기상",
+    description: "기상 시간을 기록해요",
+    href: "/morning",
+    color: {
+      bg: "bg-amber-50",
+      iconBg: "bg-amber-500",
+      iconColor: "text-white",
+      border: "border-amber-200",
+    },
+  },
+  {
+    id: "entertainment",
+    icon: Music,
+    label: "트로트 / 영어",
+    description: "음악 듣기와 영어 공부",
+    href: "/entertainment",
+    color: {
+      bg: "bg-emerald-50",
+      iconBg: "bg-secondary",
+      iconColor: "text-secondary-foreground",
+      border: "border-emerald-200",
+    },
+  },
+] as const;
+
+/* ============================================
+   메인 대시보드 페이지
+   ============================================ */
 export default function Home() {
+  const userName = "홍길동";
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="flex min-h-dvh flex-col bg-background">
+      {/* ============================================
+          상단 영역: 시간 + 환영 문구 + 멤버십 배지
+          ============================================ */}
+      <header className="px-5 pt-8 pb-6 sm:px-8">
+        <div className="flex items-start justify-between">
+          <CurrentTime />
+          <MembershipBadge userId={SENIOR_USER_ID} />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+        <h1 className="mt-4 text-3xl font-bold leading-tight text-text-primary sm:text-4xl">
+          {userName} 어르신
+          <br />
+          <span className="text-primary">안녕하세요</span>
+        </h1>
+      </header>
+
+      {/* ============================================
+          중앙 영역: 3개 메인 기능 카드
+          ============================================ */}
+      <main className="flex-1 px-5 sm:px-8">
+        <section aria-label="주요 기능">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {mainCards.map((card) => {
+              const IconComponent = card.icon;
+
+              return (
+                <a
+                  key={card.id}
+                  href={card.href}
+                  className={`
+                    group flex items-center gap-5 rounded-2xl border-2
+                    ${card.color.border} ${card.color.bg}
+                    p-5 sm:flex-col sm:items-center sm:p-6 sm:text-center
+                    active:scale-[0.98]
+                  `}
+                  aria-label={card.label}
+                >
+                  {/* 아이콘 원형 배경 */}
+                  <div
+                    className={`
+                      flex h-16 w-16 shrink-0 items-center justify-center
+                      rounded-2xl ${card.color.iconBg}
+                      sm:h-20 sm:w-20
+                    `}
+                  >
+                    <IconComponent
+                      className={`h-8 w-8 ${card.color.iconColor} sm:h-10 sm:w-10`}
+                      strokeWidth={2.2}
+                      aria-hidden="true"
+                    />
+                  </div>
+
+                  {/* 텍스트 */}
+                  <div>
+                    <p className="text-xl font-bold text-text-primary sm:text-2xl">
+                      {card.label}
+                    </p>
+                    <p className="mt-0.5 text-base text-text-secondary sm:mt-1">
+                      {card.description}
+                    </p>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </section>
       </main>
+
+      {/* ============================================
+          하단 영역: 긴급 신고 버튼 (고정 분리)
+          ============================================ */}
+      <footer className="sticky bottom-0 border-t-2 border-red-200 bg-background px-5 pb-8 pt-5 sm:px-8">
+        <a
+          href="/emergency"
+          className={`
+            group flex w-full items-center justify-center gap-4
+            rounded-2xl border-3 border-danger bg-red-50
+            px-6 py-5
+            active:scale-[0.98]
+          `}
+          role="button"
+          aria-label="긴급 신고 - 119에 전화합니다"
+        >
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-danger">
+            <Phone
+              className="h-7 w-7 text-danger-foreground"
+              strokeWidth={2.5}
+              aria-hidden="true"
+            />
+          </div>
+          <div className="text-left">
+            <p className="text-2xl font-bold text-danger">긴급 신고</p>
+            <p className="text-base font-medium text-danger/80">
+              누르면 119에 전화합니다
+            </p>
+          </div>
+        </a>
+      </footer>
     </div>
   );
 }
