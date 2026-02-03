@@ -142,10 +142,10 @@ export default function TrotPlayer({ userId }: Props) {
           ) : (
             <iframe
               key={currentSong.youtube_id}
-              src={`https://www.youtube.com/embed/${currentSong.youtube_id}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
+              src={`https://www.youtube-nocookie.com/embed/${currentSong.youtube_id}?autoplay=0&rel=0&modestbranding=1&playsinline=1&enablejsapi=1`}
               title={`${currentSong.title} - ${currentSong.artist}`}
               className="absolute inset-0 h-full w-full"
-              allow="autoplay; encrypted-media"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             />
           )}

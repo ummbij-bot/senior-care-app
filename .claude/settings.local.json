@@ -8,7 +8,8 @@
       "Bash(curl:*)",
       "Bash(APIKEY=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkb2xpbWlscWV5b3Nrd3RncWN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDE3NjYsImV4cCI6MjA4NTUxNzc2Nn0.yQVHre1f9eajM6VvjIqdUNYnGeipBdr2Hy0LfX_jB5g\")",
       "Bash(test:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "WebFetch(domain:www.youtube.com)"
     ]
   }
 }
