@@ -5,15 +5,56 @@ import SkipNavigation from "@/components/accessibility/SkipNavigation";
 import PWAInstall from "@/components/PWAInstall";
 
 export const metadata: Metadata = {
-  title: "시니어 건강관리",
-  description: "시니어를 위한 건강관리 앱 - 복약 알림, 긴급 신고, 건강 관리",
-  keywords: ["시니어", "건강관리", "복약", "알림", "어르신"],
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_BASE_URL || "https://senior-care.vercel.app"
+  ),
+  title: {
+    default: "어르신 돌봄 - 효도앱 | 시니어 건강관리",
+    template: "%s | 시니어 건강관리",
+  },
+  description: "부모님의 안전을 실시간으로 지켜드려요. 복약 알림, 긴급 신고, AI 말벗 서비스를 제공하는 시니어 전용 건강관리 앱입니다.",
+  keywords: ["시니어", "건강관리", "복약", "알림", "어르신", "효도앱", "돌봄", "긴급신고", "보호자"],
+
+  // Open Graph (카카오톡, 페이스북 등 공유용)
+  openGraph: {
+    title: "어르신 돌봄 - 효도앱",
+    description: "부모님의 안전을 실시간으로 지켜드려요",
+    url: process.env.NEXT_PUBLIC_BASE_URL || "https://senior-care.vercel.app",
+    siteName: "시니어 건강관리",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "시니어 건강관리 앱 - 복약 알림, 긴급 신고, AI 말벗",
+      },
+    ],
+    locale: "ko_KR",
+    type: "website",
+  },
+
+  // Twitter Card
+  twitter: {
+    card: "summary_large_image",
+    title: "어르신 돌봄 - 효도앱",
+    description: "부모님의 안전을 실시간으로 지켜드려요",
+    images: ["/og-image.png"],
+  },
+
+  // 기타 메타
+  robots: {
+    index: true,
+    follow: true,
+  },
+  applicationName: "시니어케어",
+  authors: [{ name: "시니어케어 팀" }],
+  category: "Healthcare",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 3, // 시니어가 확대할 수 있도록 허용 (3배까지)
+  maximumScale: 5, // 시니어가 충분히 확대할 수 있도록 허용 (5배까지, 접근성 준수)
   userScalable: true, // 핀치 줌 허용 (접근성 필수)
   themeColor: "#faf8f5",
 };
@@ -26,6 +67,26 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
+        {/* GA4 */}
+        {process.env.NEXT_PUBLIC_GA_ID && (
+          <>
+            <script
+              async
+              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
+            />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${process.env.NEXT_PUBLIC_GA_ID}');
+                `,
+              }}
+            />
+          </>
+        )}
+
         {/* PWA */}
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />

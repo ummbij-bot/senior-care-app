@@ -2,6 +2,7 @@
 
 import { Phone, ArrowLeft, AlertTriangle, Heart, Flame, Volume2 } from "lucide-react";
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { trackEmergencyCall } from "@/lib/analytics";
 
 type Props = {
   guardianPhone: string | null;
@@ -110,6 +111,9 @@ export default function EmergencyClient({ guardianPhone }: Props) {
         // 두 번째 클릭: 실제 전화
         vibrate([50, 50, 50]); // 연속 진동
         speak("전화를 겁니다.");
+
+        // GA4 이벤트 추적
+        trackEmergencyCall(id as "119" | "112" | "guardian");
 
         // 짧은 딜레이 후 전화 (TTS가 시작할 시간)
         setTimeout(() => {

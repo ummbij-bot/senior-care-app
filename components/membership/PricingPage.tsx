@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useMembership } from "@/lib/hooks/useMembership";
 import { PRICING } from "@/lib/membership";
+import { trackPaymentStart } from "@/lib/analytics";
 
 type Props = {
   userId: string;
@@ -53,6 +54,11 @@ export default function PricingPage({ userId }: Props) {
   // Toss Payments 결제 시작
   const handlePayment = async () => {
     setIsProcessing(true);
+
+    // GA4 결제 이벤트 추적
+    const planLabel = selectedPlan === "monthly" ? "월간" : "연간";
+    const planAmount = selectedPlan === "monthly" ? PRICING.monthly.amount : PRICING.yearly.amount;
+    trackPaymentStart(planLabel, planAmount);
 
     try {
       const orderId = `order_${userId.slice(0, 8)}_${Date.now()}`;

@@ -1,0 +1,49 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#faf8f5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f0ede8;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="iconBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563b0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1d4d8f;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)" rx="0" ry="0"/>
+  <!-- Decorative circles -->
+  <circle cx="1050" cy="100" r="200" fill="#2563b0" opacity="0.05"/>
+  <circle cx="150" cy="530" r="150" fill="#047857" opacity="0.05"/>
+  <!-- Icon background -->
+  <rect x="80" y="180" width="120" height="120" rx="28" fill="url(#iconBg)"/>
+  <!-- Heart icon -->
+  <path d="M140 230 C140 215, 160 205, 160 220 C160 205, 180 215, 180 230 C180 250, 160 265, 160 265 C160 265, 140 250, 140 230Z" fill="white"/>
+  <!-- Cross on heart -->
+  <rect x="155" y="225" width="10" height="25" rx="2" fill="#2563b0" opacity="0.3"/>
+  <rect x="148" y="233" width="25" height="10" rx="2" fill="#2563b0" opacity="0.3"/>
+  <!-- Title text -->
+  <text x="80" y="370" font-family="sans-serif" font-size="56" font-weight="bold" fill="#1c1917">어르신 돌봄</text>
+  <text x="80" y="440" font-family="sans-serif" font-size="56" font-weight="bold" fill="#2563b0">효도앱</text>
+  <!-- Description -->
+  <text x="80" y="510" font-family="sans-serif" font-size="28" fill="#57534e">부모님의 안전을 실시간으로 지켜드려요</text>
+  <!-- Features -->
+  <text x="80" y="570" font-family="sans-serif" font-size="20" fill="#a8a29e">복약 알림 · 긴급 신고 · 건강 관리 · AI 말벗</text>
+  <!-- Right side decoration - phone mockup -->
+  <rect x="750" y="100" width="340" height="430" rx="30" fill="white" stroke="#e7e5e4" stroke-width="2"/>
+  <rect x="770" y="130" width="300" height="370" rx="10" fill="#faf8f5"/>
+  <!-- Pill icon in phone -->
+  <circle cx="820" cy="200" r="25" fill="#dbeafe"/>
+  <rect x="810" y="190" width="20" height="20" rx="5" fill="#2563b0"/>
+  <rect x="850" y="190" width="120" height="14" rx="4" fill="#e7e5e4"/>
+  <rect x="850" y="212" width="80" height="10" rx="3" fill="#f0ede8"/>
+  <!-- Heart icon in phone -->
+  <circle cx="820" cy="280" r="25" fill="#fce7f3"/>
+  <rect x="810" y="270" width="20" height="20" rx="5" fill="#c81e1e"/>
+  <rect x="850" y="270" width="120" height="14" rx="4" fill="#e7e5e4"/>
+  <rect x="850" y="292" width="80" height="10" rx="3" fill="#f0ede8"/>
+  <!-- Music icon in phone -->
+  <circle cx="820" cy="360" r="25" fill="#d1fae5"/>
+  <rect x="810" y="350" width="20" height="20" rx="5" fill="#047857"/>
+  <rect x="850" y="350" width="120" height="14" rx="4" fill="#e7e5e4"/>
+  <rect x="850" y="372" width="80" height="10" rx="3" fill="#f0ede8"/>
+</svg>

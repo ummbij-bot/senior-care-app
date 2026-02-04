@@ -1,14 +1,42 @@
 "use client";
 
 import { useState } from "react";
-import { Phone, ArrowRight, Loader2, Heart } from "lucide-react";
+import { Phone, ArrowRight, Loader2, Heart, Check, ExternalLink } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-type Step = "phone" | "otp" | "success";
+type Step = "phone" | "terms" | "otp" | "success";
+
+type TermsState = {
+  termsOfService: boolean;
+  privacyPolicy: boolean;
+  locationTerms: boolean;
+};
+
+const TERMS_LIST = [
+  {
+    key: "termsOfService" as const,
+    label: "이용약관",
+    required: true,
+    href: "/legal/terms",
+  },
+  {
+    key: "privacyPolicy" as const,
+    label: "개인정보 처리방침",
+    required: true,
+    href: "/legal/privacy",
+  },
+  {
+    key: "locationTerms" as const,
+    label: "위치기반 서비스 이용약관",
+    required: true,
+    href: "/legal/location",
+  },
+];
 
 /**
  * 시니어 친화적 로그인 페이지
- * - 전화번호 OTP 방식 (비밀번호 타이핑 최소화)
+ * - 전화번호 OTP 방식
+ * - 필수 약관 동의 체크박스 (가입 전 필수)
  * - 큰 버튼, 명확한 안내
  */
 export default function LoginPage() {
@@ -17,16 +45,42 @@ export default function LoginPage() {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [terms, setTerms] = useState<TermsState>({
+    termsOfService: false,
+    privacyPolicy: false,
+    locationTerms: false,
+  });
 
   const supabase = createSupabaseBrowserClient();
 
-  // 전화번호 형식 변환 (010-1234-5678 -> +821012345678)
+  const allTermsAgreed = TERMS_LIST.every((t) => terms[t.key]);
+
+  const toggleAll = () => {
+    const newValue = !allTermsAgreed;
+    setTerms({
+      termsOfService: newValue,
+      privacyPolicy: newValue,
+      locationTerms: newValue,
+    });
+  };
+
+  // 전화번호 형식 변환
   const formatPhoneForAuth = (phoneNumber: string) => {
     const cleaned = phoneNumber.replace(/[^0-9]/g, "");
     if (cleaned.startsWith("0")) {
       return "+82" + cleaned.slice(1);
     }
     return "+82" + cleaned;
+  };
+
+  // 약관 동의 후 OTP 발송
+  const handleProceedToOtp = () => {
+    if (!allTermsAgreed) {
+      setError("모든 약관에 동의해주세요");
+      return;
+    }
+    setError(null);
+    handleSendOtp();
   };
 
   // OTP 발송
@@ -70,7 +124,7 @@ export default function LoginPage() {
 
     try {
       const formattedPhone = formatPhoneForAuth(phone);
-      const { error } = await supabase.auth.verifyOtp({
+      const { data, error } = await supabase.auth.verifyOtp({
         phone: formattedPhone,
         token: otp,
         type: "sms",
@@ -80,10 +134,20 @@ export default function LoginPage() {
         throw error;
       }
 
+      // 약관 동의 일시 기록
+      if (data?.user) {
+        await supabase
+          .from("profiles")
+          .update({ terms_agreed_at: new Date().toISOString() })
+          .eq("id", data.user.id);
+      }
+
       setStep("success");
-      // 1초 후 메인 페이지로 이동
       setTimeout(() => {
-        window.location.href = "/";
+        // redirect 파라미터가 있으면 해당 페이지로
+        const params = new URLSearchParams(window.location.search);
+        const redirectTo = params.get("redirect") || "/";
+        window.location.href = redirectTo;
       }, 1500);
     } catch (err) {
       console.error("OTP 인증 오류:", err);
@@ -145,9 +209,108 @@ export default function LoginPage() {
               )}
 
               <button
-                onClick={handleSendOtp}
-                disabled={loading || phone.length < 10}
+                onClick={() => {
+                  if (phone.length < 10) {
+                    setError("전화번호를 정확히 입력해주세요");
+                    return;
+                  }
+                  setError(null);
+                  setStep("terms");
+                }}
+                disabled={phone.length < 10}
                 className="btn btn-primary w-full flex items-center justify-center gap-2"
+              >
+                다음
+                <ArrowRight className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+
+          {/* 약관 동의 단계 */}
+          {step === "terms" && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-bold text-text-primary">
+                  약관에 동의해 주세요
+                </h2>
+                <p className="mt-1 text-base text-text-secondary">
+                  서비스 이용을 위해 필수 약관에 동의해 주세요
+                </p>
+              </div>
+
+              {/* 전체 동의 */}
+              <button
+                onClick={toggleAll}
+                className={`flex w-full items-center gap-3 rounded-xl border-2 p-4 transition-colors ${
+                  allTermsAgreed
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-surface-raised"
+                }`}
+              >
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                    allTermsAgreed ? "bg-primary" : "bg-surface border-2 border-border"
+                  }`}
+                >
+                  {allTermsAgreed && <Check className="h-5 w-5 text-white" strokeWidth={3} />}
+                </div>
+                <span className="text-lg font-bold text-text-primary">
+                  전체 동의하기
+                </span>
+              </button>
+
+              {/* 개별 약관 */}
+              <div className="space-y-3">
+                {TERMS_LIST.map((item) => (
+                  <div
+                    key={item.key}
+                    className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3"
+                  >
+                    <button
+                      onClick={() =>
+                        setTerms((prev) => ({
+                          ...prev,
+                          [item.key]: !prev[item.key],
+                        }))
+                      }
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${
+                        terms[item.key]
+                          ? "bg-primary"
+                          : "bg-surface border-2 border-border"
+                      }`}
+                      aria-label={`${item.label} 동의`}
+                    >
+                      {terms[item.key] && (
+                        <Check className="h-4 w-4 text-white" strokeWidth={3} />
+                      )}
+                    </button>
+                    <span className="flex-1 text-base text-text-primary">
+                      <span className="text-danger font-medium">(필수)</span>{" "}
+                      {item.label}
+                    </span>
+                    <a
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-surface"
+                      aria-label={`${item.label} 보기`}
+                    >
+                      <ExternalLink className="h-4 w-4 text-text-muted" />
+                    </a>
+                  </div>
+                ))}
+              </div>
+
+              {error && (
+                <div className="rounded-xl border-2 border-danger bg-red-50 px-4 py-3">
+                  <p className="text-base font-medium text-danger">{error}</p>
+                </div>
+              )}
+
+              <button
+                onClick={handleProceedToOtp}
+                disabled={!allTermsAgreed || loading}
+                className="btn btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-40"
               >
                 {loading ? (
                   <>
@@ -156,10 +319,20 @@ export default function LoginPage() {
                   </>
                 ) : (
                   <>
-                    인증번호 받기
+                    동의하고 인증번호 받기
                     <ArrowRight className="h-5 w-5" />
                   </>
                 )}
+              </button>
+
+              <button
+                onClick={() => {
+                  setStep("phone");
+                  setError(null);
+                }}
+                className="btn btn-outline w-full"
+              >
+                이전으로
               </button>
             </div>
           )}

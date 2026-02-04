@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 export type CurrentUser = {
   id: string;
   name: string;
-  role: "senior" | "guardian";
+  role: "senior" | "guardian" | "admin";
   phone: string | null;
   guardianPhone: string | null; // 시니어에 연결된 보호자 전화번호
 };
@@ -61,7 +61,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   return {
     id: user.id,
     name: profile.name,
-    role: profile.role as "senior" | "guardian",
+    role: profile.role as "senior" | "guardian" | "admin",
     phone: profile.phone,
     guardianPhone,
   };
