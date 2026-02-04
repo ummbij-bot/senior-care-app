@@ -1,7 +1,7 @@
 "use client";
 
 import { MessageCircle, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import AIChatModal from "./AIChatModal";
 
 type Props = {
@@ -11,7 +11,8 @@ type Props = {
 /**
  * AI 손자 플로팅 버튼 + 선제적 말풍선
  * - 메인 대시보드 우측 하단에 항상 표시
- * - 30초 후 자동으로 개인화된 관심 말풍선 표시
+ * - 10초 비활동 시 자동으로 말풍선 표시 ("식사는 하셨나요?")
+ * - 활동 감지 시 타이머 리셋
  * - 클릭 시 채팅 모달 열기
  */
 export default function FloatingAIButton({ userName }: Props) {
@@ -19,25 +20,47 @@ export default function FloatingAIButton({ userName }: Props) {
   const [proactiveMessage, setProactiveMessage] = useState<string | null>(null);
   const [showBubble, setShowBubble] = useState(false);
 
-  // 30초 후 선제적 말풍선 표시
+  // 10초 비활동 감지 → 말풍선 표시
+  const resetTimer = useCallback(() => {
+    setShowBubble(false);
+  }, []);
+
   useEffect(() => {
     const name = userName || "어르신";
-    const messages = [
-      `${name} 어르신, 오늘 날씨가 참 좋아요. 산책 어떠세요?`,
-      `${name} 어르신, 오늘 하루도 건강하게 보내세요!`,
-      `${name} 어르신, 약 드시는 거 잊지 마세요!`,
-      `${name} 어르신, 오늘도 좋은 하루 되세요!`,
-      `${name} 어르신, 도움이 필요하시면 말씀해 주세요!`,
-    ];
+    const INACTIVITY_DELAY = 10000; // 10초
+    const INACTIVITY_MESSAGE = `${name} 어르신, 식사는 하셨나요?`;
 
-    const timer = setTimeout(() => {
-      const msg = messages[Math.floor(Math.random() * messages.length)];
-      setProactiveMessage(msg);
-      setShowBubble(true);
-    }, 30000);
+    let timer: ReturnType<typeof setTimeout>;
 
-    return () => clearTimeout(timer);
-  }, [userName]);
+    const startTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        setProactiveMessage(INACTIVITY_MESSAGE);
+        setShowBubble(true);
+      }, INACTIVITY_DELAY);
+    };
+
+    const handleActivity = () => {
+      resetTimer();
+      startTimer();
+    };
+
+    // 사용자 활동 감지 이벤트
+    const events = ["click", "scroll", "keydown", "touchstart", "mousemove"];
+    events.forEach((event) =>
+      window.addEventListener(event, handleActivity, { passive: true })
+    );
+
+    // 초기 타이머 시작
+    startTimer();
+
+    return () => {
+      clearTimeout(timer);
+      events.forEach((event) =>
+        window.removeEventListener(event, handleActivity)
+      );
+    };
+  }, [userName, resetTimer]);
 
   // 말풍선 자동 숨김 (15초 후)
   useEffect(() => {

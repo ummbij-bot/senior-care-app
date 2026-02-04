@@ -252,6 +252,21 @@ export default function LoginPage() {
         <p className="text-base text-text-muted">
           문제가 있으시면 보호자에게 도움을 요청하세요
         </p>
+        <div className="mt-3 flex items-center justify-center gap-4">
+          <a
+            href="/legal/privacy"
+            className="text-base text-text-muted underline underline-offset-4 hover:text-text-secondary"
+          >
+            개인정보 처리방침
+          </a>
+          <span className="text-text-muted">|</span>
+          <a
+            href="/legal/terms"
+            className="text-base text-text-muted underline underline-offset-4 hover:text-text-secondary"
+          >
+            이용약관
+          </a>
+        </div>
       </footer>
     </div>
   );

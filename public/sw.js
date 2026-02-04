@@ -9,13 +9,14 @@
    3. 백그라운드에서도 알림 수신 가능
    ============================================ */
 
-const SW_VERSION = "1.1.0";
+const SW_VERSION = "1.2.0";
 
 const CACHE_NAME = `senior-care-v${SW_VERSION}`;
 
 // 캐싱할 정적 자산
 const STATIC_ASSETS = [
   "/",
+  "/emergency",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

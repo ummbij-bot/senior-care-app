@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 /**
  * 현재 로그인한 사용자 정보 타입
@@ -67,24 +68,16 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 }
 
 /**
- * 개발/테스트용: 하드코딩된 테스트 사용자 반환
- * - Auth 미설정 시 fallback으로 사용
- * - 프로덕션에서는 null 반환하도록 변경
+ * 현재 로그인한 사용자 정보를 조회하거나, 비로그인 시 /login으로 리다이렉트
+ * - Server Component에서 사용
+ * - middleware.ts와 이중 보호 (defense-in-depth)
  */
 export async function getCurrentUserOrDemo(): Promise<CurrentUser> {
   const user = await getCurrentUser();
 
-  if (user) {
-    return user;
+  if (!user) {
+    redirect("/login");
   }
 
-  // 개발용 폴백: Auth 미설정 시 테스트 사용자 반환
-  // TODO: 프로덕션에서는 이 폴백 제거 후 redirect("/login") 처리
-  return {
-    id: "4b2d8b80-222d-4783-a683-f1e96f1dbac3",
-    name: "홍길동",
-    role: "senior",
-    phone: "010-1234-5678",
-    guardianPhone: "010-9876-5432",
-  };
+  return user;
 }
