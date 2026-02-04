@@ -9,7 +9,20 @@
    3. 백그라운드에서도 알림 수신 가능
    ============================================ */
 
-const SW_VERSION = "1.0.0";
+const SW_VERSION = "1.1.0";
+
+const CACHE_NAME = `senior-care-v${SW_VERSION}`;
+
+// 캐싱할 정적 자산
+const STATIC_ASSETS = [
+  "/",
+  "/manifest.json",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+];
+
+// ── 설치: 정적 자산 프리캐싱 ──
+// (기존 install 이벤트를 아래에서 대체)
 
 // ── Push 메시지 수신 ──
 self.addEventListener("push", (event) => {
@@ -105,13 +118,74 @@ self.addEventListener("notificationclick", (event) => {
   }
 });
 
-// ── 설치/활성화 ──
-self.addEventListener("install", () => {
+// ── 설치: 정적 자산 프리캐싱 ──
+self.addEventListener("install", (event) => {
   console.log(`[SW] 설치 완료 v${SW_VERSION}`);
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
+  );
   self.skipWaiting();
 });
 
+// ── 활성화: 오래된 캐시 삭제 ──
 self.addEventListener("activate", (event) => {
   console.log(`[SW] 활성화 v${SW_VERSION}`);
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((key) => key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      )
+    ).then(() => self.clients.claim())
+  );
+});
+
+// ── Fetch: 캐싱 전략 ──
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // API 요청은 네트워크 우선
+  if (url.pathname.startsWith("/api/") || url.origin !== self.location.origin) {
+    return;
+  }
+
+  // 정적 자산 (이미지, JS, CSS) → 캐시 우선
+  if (
+    request.destination === "image" ||
+    request.destination === "script" ||
+    request.destination === "style" ||
+    url.pathname.startsWith("/icons/")
+  ) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // HTML 페이지 → 네트워크 우선, 오프라인 시 캐시
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request).then((cached) => cached || caches.match("/")))
+    );
+    return;
+  }
 });

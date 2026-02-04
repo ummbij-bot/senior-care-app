@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="108" fill="#2563b0"/>
+  <g transform="translate(256,240)">
+    <!-- Heart shape -->
+    <path d="M0-80 C-40-120 -100-100 -100-50 C-100 20 0 80 0 80 C0 80 100 20 100-50 C100-100 40-120 0-80Z" fill="#ffffff" opacity="0.95"/>
+    <!-- Plus/cross (health) -->
+    <rect x="-15" y="-45" width="30" height="70" rx="8" fill="#2563b0"/>
+    <rect x="-35" y="-25" width="70" height="30" rx="8" fill="#2563b0"/>
+  </g>
+  <!-- Text: 시니어케어 -->
+  <text x="256" y="420" text-anchor="middle" font-family="sans-serif" font-size="56" font-weight="bold" fill="#ffffff" opacity="0.9">시니어케어</text>
+</svg>

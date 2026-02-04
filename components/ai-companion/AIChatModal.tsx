@@ -1,58 +1,106 @@
 "use client";
 
-import { X, Send, User, Bot } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { X, Send, User, Bot, Trash2 } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 type Message = {
   id: string;
   role: "user" | "assistant";
   content: string;
-  timestamp: Date;
+  timestamp: string; // ISO string for serialization
 };
 
-const PLACEHOLDER_MESSAGES: Message[] = [
-  {
-    id: "1",
-    role: "assistant",
-    content: "안녕하세요! AI 손자입니다. 오늘 하루 어떠셨어요?",
-    timestamp: new Date(Date.now() - 120000),
-  },
-  {
-    id: "2",
-    role: "user",
-    content: "오늘 약은 다 먹었어",
-    timestamp: new Date(Date.now() - 60000),
-  },
-  {
-    id: "3",
-    role: "assistant",
-    content:
-      "잘하셨어요! 약 복용을 꼬박꼬박 지키시는 게 정말 대단하세요. 오늘 몸 상태는 어떠세요?",
-    timestamp: new Date(Date.now() - 30000),
-  },
-];
+const STORAGE_KEY = "senior-care-chat-history";
+const MAX_MESSAGES = 50;
 
 const AUTO_REPLIES = [
   "네, 알겠습니다! 더 궁금한 것이 있으시면 말씀해 주세요.",
   "좋은 말씀이시네요! 오늘도 건강한 하루 보내세요.",
   "잘 알겠습니다. 언제든 편하게 말씀해 주세요.",
   "네! 항상 응원하고 있어요.",
+  "그렇군요! 제가 도울 수 있는 일이 있으면 말씀해 주세요.",
 ];
+
+/** 시간대별 인사말 생성 */
+function getTimeGreeting(userName?: string): string {
+  const hour = new Date().getHours();
+  const name = userName ? `${userName} 어르신` : "어르신";
+
+  if (hour < 12) {
+    return `좋은 아침이에요, ${name}! 오늘 하루도 건강하게 시작해요.`;
+  } else if (hour < 18) {
+    return `${name}, 오후에도 힘내세요! 도움이 필요하시면 말씀해 주세요.`;
+  } else {
+    return `${name}, 편안한 저녁 보내세요. 오늘 하루 수고하셨어요!`;
+  }
+}
+
+/** localStorage에서 대화 기록 불러오기 */
+function loadMessages(): Message[] {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved) as Message[];
+      return parsed.slice(-MAX_MESSAGES);
+    }
+  } catch {
+    // localStorage 접근 실패 시 빈 배열
+  }
+  return [];
+}
+
+/** localStorage에 대화 기록 저장 */
+function saveMessages(messages: Message[]) {
+  try {
+    const trimmed = messages.slice(-MAX_MESSAGES);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+  } catch {
+    // 저장 실패 무시
+  }
+}
 
 type Props = {
   onClose: () => void;
+  userName?: string;
 };
 
 /**
  * AI 손자 채팅 모달
  * - 전체화면 오버레이 (시니어 최적)
- * - 큰 글씨, 큰 입력칸, 큰 전송 버튼
- * - UI 데모: 플레이스홀더 대화 + 자동 응답
+ * - 시간대 기반 인사말
+ * - localStorage 대화 기록 저장/복원
+ * - 대화 지우기 기능
  */
-export default function AIChatModal({ onClose }: Props) {
-  const [messages, setMessages] = useState<Message[]>(PLACEHOLDER_MESSAGES);
+export default function AIChatModal({ onClose, userName }: Props) {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
+  const [initialized, setInitialized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 초기화: localStorage에서 기록 로드 + 인사말
+  useEffect(() => {
+    const saved = loadMessages();
+    if (saved.length > 0) {
+      setMessages(saved);
+    } else {
+      // 첫 방문: 시간대 인사말
+      const greeting: Message = {
+        id: "greeting-" + Date.now(),
+        role: "assistant",
+        content: getTimeGreeting(userName),
+        timestamp: new Date().toISOString(),
+      };
+      setMessages([greeting]);
+    }
+    setInitialized(true);
+  }, [userName]);
+
+  // 메시지 변경 시 localStorage에 저장
+  useEffect(() => {
+    if (initialized && messages.length > 0) {
+      saveMessages(messages);
+    }
+  }, [messages, initialized]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -67,14 +115,14 @@ export default function AIChatModal({ onClose }: Props) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  const handleSend = () => {
+  const handleSend = useCallback(() => {
     if (!inputValue.trim()) return;
 
     const userMsg: Message = {
       id: Date.now().toString(),
       role: "user",
       content: inputValue,
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -88,13 +136,29 @@ export default function AIChatModal({ onClose }: Props) {
         id: (Date.now() + 1).toString(),
         role: "assistant",
         content: reply,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
     }, 800);
+  }, [inputValue]);
+
+  const handleClearHistory = () => {
+    const greeting: Message = {
+      id: "greeting-" + Date.now(),
+      role: "assistant",
+      content: getTimeGreeting(userName),
+      timestamp: new Date().toISOString(),
+    };
+    setMessages([greeting]);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // 무시
+    }
   };
 
-  const formatTime = (date: Date) => {
+  const formatTime = (isoString: string) => {
+    const date = new Date(isoString);
     const h = date.getHours();
     const m = date.getMinutes().toString().padStart(2, "0");
     const period = h < 12 ? "오전" : "오후";
@@ -125,13 +189,23 @@ export default function AIChatModal({ onClose }: Props) {
             <p className="text-sm text-text-secondary">언제든 대화하세요</p>
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="flex h-12 w-12 items-center justify-center rounded-xl hover:bg-surface active:scale-95"
-          aria-label="대화창 닫기"
-        >
-          <X className="h-6 w-6 text-text-primary" strokeWidth={2.2} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleClearHistory}
+            className="flex h-12 w-12 items-center justify-center rounded-xl hover:bg-surface active:scale-95"
+            aria-label="대화 기록 지우기"
+            title="대화 지우기"
+          >
+            <Trash2 className="h-5 w-5 text-text-muted" strokeWidth={2.2} />
+          </button>
+          <button
+            onClick={onClose}
+            className="flex h-12 w-12 items-center justify-center rounded-xl hover:bg-surface active:scale-95"
+            aria-label="대화창 닫기"
+          >
+            <X className="h-6 w-6 text-text-primary" strokeWidth={2.2} />
+          </button>
+        </div>
       </header>
 
       {/* 메시지 목록 */}

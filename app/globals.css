@@ -408,3 +408,62 @@ body {
   background-color: var(--primary);
   color: var(--primary-foreground);
 }
+
+/* ============================================
+   고대비 모드 (High Contrast Mode)
+   - 시력이 약한 시니어를 위한 극대화된 대비
+   ============================================ */
+.high-contrast {
+  --background: #000000;
+  --foreground: #ffffff;
+
+  --primary: #ffff00;
+  --primary-hover: #ffff66;
+  --primary-foreground: #000000;
+
+  --secondary: #00ff00;
+  --secondary-hover: #66ff66;
+  --secondary-foreground: #000000;
+
+  --danger: #ff0000;
+  --danger-hover: #ff6666;
+  --danger-foreground: #ffffff;
+
+  --warning: #ffff00;
+  --warning-bg: #333300;
+  --warning-foreground: #ffff00;
+
+  --success: #00ff00;
+  --success-bg: #003300;
+  --success-foreground: #00ff00;
+
+  --surface: #1a1a1a;
+  --surface-raised: #2a2a2a;
+  --border: #ffffff;
+  --border-strong: #ffff00;
+
+  --text-primary: #ffffff;
+  --text-secondary: #e0e0e0;
+  --text-muted: #b0b0b0;
+
+  --focus-ring: #ffff00;
+  --focus-ring-offset: #000000;
+}
+
+/* 고대비 모드에서 링크 강조 */
+.high-contrast a {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* 고대비 모드에서 버튼 테두리 강화 */
+.high-contrast button,
+.high-contrast [role="button"] {
+  border-width: 3px !important;
+}
+
+/* 고대비 모드에서 이미지/아이콘 대비 개선 */
+.high-contrast img,
+.high-contrast svg {
+  filter: contrast(1.2);
+}

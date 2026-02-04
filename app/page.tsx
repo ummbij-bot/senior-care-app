@@ -1,14 +1,12 @@
 import { Pill, Sun, Music, Phone } from "lucide-react";
 import CurrentTime from "@/components/CurrentTime";
 import FloatingAIButton from "@/components/ai-companion/FloatingAIButton";
-// [전면 무료화] 결제 유도 배지 숨김 - 과금 복원 시 주석 해제
-// import MembershipBadge from "@/components/membership/MembershipBadge";
+import { getCurrentUserOrDemo } from "@/lib/auth/getCurrentUser";
+import MembershipBadge from "@/components/membership/MembershipBadge";
 
 /* ============================================
    메인 대시보드 카드 데이터
    ============================================ */
-const SENIOR_USER_ID = "4b2d8b80-222d-4783-a683-f1e96f1dbac3";
-
 const mainCards = [
   {
     id: "medication",
@@ -52,10 +50,13 @@ const mainCards = [
 ] as const;
 
 /* ============================================
-   메인 대시보드 페이지
+   메인 대시보드 페이지 (Server Component)
+   - Supabase Auth로 현재 사용자 정보 조회
+   - 하드코딩 제거, 동적 사용자 이름 표시
    ============================================ */
-export default function Home() {
-  const userName = "홍길동";
+export default async function Home() {
+  // 현재 로그인한 사용자 정보 조회
+  const user = await getCurrentUserOrDemo();
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
@@ -65,12 +66,10 @@ export default function Home() {
       <header className="px-5 pt-8 pb-6 sm:px-8">
         <div className="flex items-start justify-between">
           <CurrentTime />
-          {/* [전면 무료화] 결제 유도 배지 숨김 - 과금 복원 시 주석 해제
-          <MembershipBadge userId={SENIOR_USER_ID} />
-          */}
+          <MembershipBadge userId={user.id} />
         </div>
         <h1 className="mt-4 text-3xl font-bold leading-tight text-text-primary sm:text-4xl">
-          {userName} 어르신
+          {user.name} 어르신
           <br />
           <span className="text-primary">안녕하세요</span>
         </h1>
@@ -160,7 +159,7 @@ export default function Home() {
       </footer>
 
       {/* AI 손자 플로팅 버튼 */}
-      <FloatingAIButton />
+      <FloatingAIButton userName={user.name} />
     </div>
   );
 }

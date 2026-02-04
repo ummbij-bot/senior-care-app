@@ -1,7 +1,7 @@
 "use client";
 
-// import { Lock, Crown } from "lucide-react";
-// import { useMembership } from "@/lib/hooks/useMembership";
+import { Lock, Crown } from "lucide-react";
+import { useMembership } from "@/lib/hooks/useMembership";
 
 type Props = {
   userId: string;
@@ -13,18 +13,26 @@ type Props = {
 /**
  * 프리미엄 기능 게이트
  *
- * [전면 무료화 모드]
- * 조건 없이 무조건 children 렌더링.
- * 과금 복원 시 아래 주석 블록으로 교체.
+ * 프리미엄 사용자는 children을 렌더링하고,
+ * 무료 사용자는 잠금 화면(업그레이드 유도)을 표시합니다.
+ *
+ * [전면 무료화 롤백 방법]
+ * 이 파일 전체를 아래 코드로 교체:
+ * ```
+ * export default function PremiumGate({ children }: Props) {
+ *   return <>{children}</>;
+ * }
+ * ```
  */
 export default function PremiumGate({
+  userId,
+  featureName,
   children,
+  fallback,
 }: Props) {
-  return <>{children}</>;
-
-  /* ── [과금 복원 시 아래 블록 주석 해제, 위 return 삭제] ──
   const { isPremium, loading } = useMembership(userId);
 
+  // 로딩 중
   if (loading) {
     return (
       <div className="card animate-pulse py-12 text-center">
@@ -34,13 +42,17 @@ export default function PremiumGate({
     );
   }
 
+  // 프리미엄 사용자 → 컨텐츠 표시
   if (isPremium) {
     return <>{children}</>;
   }
 
-  // 무료 사용자 → 잠금 화면
-  if (fallback) return <>{fallback}</>;
+  // 무료 사용자 → fallback이 있으면 fallback, 없으면 기본 잠금 화면
+  if (fallback) {
+    return <>{fallback}</>;
+  }
 
+  // 기본 잠금 화면
   return (
     <div className="card border-2 border-amber-300 bg-amber-50 py-10 text-center">
       <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-amber-100">
@@ -66,5 +78,4 @@ export default function PremiumGate({
       </p>
     </div>
   );
-  */
 }

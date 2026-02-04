@@ -4,38 +4,40 @@ import { MessageCircle, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import AIChatModal from "./AIChatModal";
 
-const PROACTIVE_MESSAGES = [
-  "오늘 날씨가 참 좋아요. 산책 어떠세요?",
-  "오늘 하루도 건강하게 보내세요!",
-  "약 드시는 거 잊지 마세요!",
-  "오늘도 좋은 하루 되세요!",
-  "혹시 도움이 필요하시면 말씀해 주세요!",
-];
+type Props = {
+  userName?: string;
+};
 
 /**
  * AI 손자 플로팅 버튼 + 선제적 말풍선
  * - 메인 대시보드 우측 하단에 항상 표시
- * - 30초 후 자동으로 관심 말풍선 표시
+ * - 30초 후 자동으로 개인화된 관심 말풍선 표시
  * - 클릭 시 채팅 모달 열기
  */
-export default function FloatingAIButton() {
+export default function FloatingAIButton({ userName }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [proactiveMessage, setProactiveMessage] = useState<string | null>(null);
   const [showBubble, setShowBubble] = useState(false);
 
   // 30초 후 선제적 말풍선 표시
   useEffect(() => {
+    const name = userName || "어르신";
+    const messages = [
+      `${name} 어르신, 오늘 날씨가 참 좋아요. 산책 어떠세요?`,
+      `${name} 어르신, 오늘 하루도 건강하게 보내세요!`,
+      `${name} 어르신, 약 드시는 거 잊지 마세요!`,
+      `${name} 어르신, 오늘도 좋은 하루 되세요!`,
+      `${name} 어르신, 도움이 필요하시면 말씀해 주세요!`,
+    ];
+
     const timer = setTimeout(() => {
-      const msg =
-        PROACTIVE_MESSAGES[
-          Math.floor(Math.random() * PROACTIVE_MESSAGES.length)
-        ];
+      const msg = messages[Math.floor(Math.random() * messages.length)];
       setProactiveMessage(msg);
       setShowBubble(true);
     }, 30000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [userName]);
 
   // 말풍선 자동 숨김 (15초 후)
   useEffect(() => {
@@ -94,7 +96,9 @@ export default function FloatingAIButton() {
       </button>
 
       {/* 채팅 모달 */}
-      {isModalOpen && <AIChatModal onClose={() => setIsModalOpen(false)} />}
+      {isModalOpen && (
+        <AIChatModal onClose={() => setIsModalOpen(false)} userName={userName} />
+      )}
     </>
   );
 }
