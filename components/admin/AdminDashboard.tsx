@@ -13,6 +13,7 @@ import {
   Clock,
   ArrowLeft,
   RefreshCw,
+  X,
 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -29,6 +30,7 @@ type UserRow = {
 type PaymentRow = {
   id: string;
   toss_order_id: string;
+  toss_payment_key: string | null;
   amount: number;
   status: string;
   method: string | null;
@@ -82,6 +84,16 @@ export default function AdminDashboard({
   payments,
 }: Props) {
   const [banLoading, setBanLoading] = useState<string | null>(null);
+  const [cancelDialog, setCancelDialog] = useState<{
+    paymentId: string;
+    paymentKey: string;
+    amount: number;
+    userName: string;
+  } | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
   const supabase = createSupabaseBrowserClient();
 
   const handleToggleBan = async (userId: string, currentlyBanned: boolean) => {
@@ -96,12 +108,60 @@ export default function AdminDashboard({
         })
         .eq("id", userId);
 
-      // 페이지 새로고침으로 데이터 반영
       window.location.reload();
     } catch (err) {
       console.error("차단 처리 실패:", err);
     } finally {
       setBanLoading(null);
+    }
+  };
+
+  const handleOpenCancelDialog = (payment: PaymentRow) => {
+    setCancelDialog({
+      paymentId: payment.id,
+      paymentKey: payment.toss_payment_key || "",
+      amount: payment.amount,
+      userName: payment.user_name,
+    });
+    setCancelReason("");
+    setCancelError(null);
+  };
+
+  const handleCancelPayment = async () => {
+    if (!cancelDialog || !cancelReason.trim()) {
+      setCancelError("취소 사유를 입력해 주세요");
+      return;
+    }
+
+    setCancelLoading(true);
+    setCancelError(null);
+
+    try {
+      const res = await fetch("/api/payments/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentKey: cancelDialog.paymentKey,
+          cancelReason: cancelReason.trim(),
+          paymentId: cancelDialog.paymentId,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setCancelError(data.error || "환불 처리에 실패했습니다");
+        return;
+      }
+
+      // 성공 → 다이얼로그 닫고 새로고침
+      setCancelDialog(null);
+      window.location.reload();
+    } catch (err) {
+      console.error("환불 처리 실패:", err);
+      setCancelError("서버 연결에 실패했습니다");
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -251,12 +311,13 @@ export default function AdminDashboard({
                     <th className="px-4 py-3 font-semibold text-gray-600">상태</th>
                     <th className="px-4 py-3 font-semibold text-gray-600">내역</th>
                     <th className="px-4 py-3 font-semibold text-gray-600">날짜</th>
+                    <th className="px-4 py-3 font-semibold text-gray-600">관리</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {payments.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-12 text-center text-gray-400">
+                      <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
                         결제 내역이 없습니다
                       </td>
                     </tr>
@@ -264,6 +325,7 @@ export default function AdminDashboard({
                     payments.map((p) => {
                       const statusInfo = STATUS_MAP[p.status] || STATUS_MAP.pending;
                       const StatusIcon = statusInfo.icon;
+                      const canCancel = p.status === "confirmed" && !!p.toss_payment_key;
                       return (
                         <tr key={p.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 font-mono text-xs text-gray-600">
@@ -282,6 +344,20 @@ export default function AdminDashboard({
                           </td>
                           <td className="px-4 py-3 text-gray-500">{p.description || "-"}</td>
                           <td className="px-4 py-3 text-gray-500">{formatDate(p.created_at)}</td>
+                          <td className="px-4 py-3">
+                            {canCancel && (
+                              <button
+                                onClick={() => handleOpenCancelDialog(p)}
+                                className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-100"
+                              >
+                                <RefreshCw className="h-3.5 w-3.5" />
+                                환불
+                              </button>
+                            )}
+                            {(p.status === "cancelled" || p.status === "refunded") && (
+                              <span className="text-xs text-gray-400">환불 완료</span>
+                            )}
+                          </td>
                         </tr>
                       );
                     })
@@ -325,6 +401,73 @@ export default function AdminDashboard({
           </div>
         )}
       </main>
+
+      {/* ── 환불 다이얼로그 ── */}
+      {cancelDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            {/* 헤더 */}
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">결제 환불</h2>
+              <button
+                onClick={() => setCancelDialog(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-gray-100"
+                aria-label="닫기"
+              >
+                <X className="h-5 w-5 text-gray-400" />
+              </button>
+            </div>
+
+            {/* 결제 정보 */}
+            <div className="mb-4 rounded-lg bg-gray-50 p-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">유저</span>
+                <span className="font-medium text-gray-900">{cancelDialog.userName}</span>
+              </div>
+              <div className="mt-2 flex justify-between text-sm">
+                <span className="text-gray-500">환불 금액</span>
+                <span className="font-bold text-red-600">{formatAmount(cancelDialog.amount)}</span>
+              </div>
+            </div>
+
+            {/* 취소 사유 입력 */}
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              취소 사유 <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="환불 사유를 입력해 주세요"
+              rows={3}
+              className="mb-4 w-full resize-none rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+
+            {/* 에러 메시지 */}
+            {cancelError && (
+              <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+                {cancelError}
+              </div>
+            )}
+
+            {/* 버튼 */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCancelDialog(null)}
+                className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleCancelPayment}
+                disabled={cancelLoading || !cancelReason.trim()}
+                className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {cancelLoading ? "처리 중..." : "환불 진행"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

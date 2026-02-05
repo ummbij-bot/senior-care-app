@@ -1,7 +1,10 @@
 "use client";
 
+import { memo } from "react";
 import { Check, X, Clock, Pill } from "lucide-react";
 import { useConfetti } from "@/lib/hooks/useConfetti";
+import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useSpeech } from "@/lib/hooks/useSpeech";
 import VoiceMedicationButton from "./VoiceMedicationButton";
 
 type MedicationCardProps = {
@@ -21,8 +24,10 @@ type MedicationCardProps = {
  * 개별 복약 카드
  * - 시니어가 한눈에 상태를 파악할 수 있도록 색상 코딩
  * - '약 먹었어요' 버튼은 최대한 크고 명확하게
+ * - 햅틱 피드백 + TTS 음성 안내 포함
+ * - React.memo로 불필요한 리렌더링 방지
  */
-export default function MedicationCard({
+function MedicationCardInner({
   logId,
   medicationName,
   dosage,
@@ -35,11 +40,21 @@ export default function MedicationCard({
   isProcessing,
 }: MedicationCardProps) {
   const { fire } = useConfetti();
+  const { tap, success } = useHaptic();
+  const { speakMedicationDone } = useSpeech();
 
-  // 폭죽 + 햅틱과 함께 복용 처리
-  const handleTakeWithConfetti = () => {
+  // 폭죽 + 햅틱 + TTS와 함께 복용 처리
+  const handleTakeWithFeedback = () => {
     fire();
+    success();                // 햅틱 피드백 (짧은 2회 진동)
+    speakMedicationDone();    // "복약 확인이 완료되었습니다. 건강한 하루 되세요!"
     onTake(logId);
+  };
+
+  // 건너뛰기 + 햅틱
+  const handleSkipWithFeedback = () => {
+    tap();
+    onSkip(logId);
   };
 
   // 시간 포맷 (24시→12시간)
@@ -138,7 +153,7 @@ export default function MedicationCard({
       {status === "pending" && (
         <div className="mt-4 flex gap-3">
           <button
-            onClick={handleTakeWithConfetti}
+            onClick={handleTakeWithFeedback}
             disabled={isProcessing}
             className="btn btn-primary btn-lg flex-1 text-xl"
             aria-label={`${medicationName} 복용 완료`}
@@ -150,12 +165,12 @@ export default function MedicationCard({
           {/* 음성 인식 버튼 (지원 브라우저만 표시) */}
           <VoiceMedicationButton
             medicationName={medicationName}
-            onConfirmed={handleTakeWithConfetti}
+            onConfirmed={handleTakeWithFeedback}
             disabled={isProcessing}
           />
 
           <button
-            onClick={() => onSkip(logId)}
+            onClick={handleSkipWithFeedback}
             disabled={isProcessing}
             className="btn btn-outline shrink-0"
             aria-label={`${medicationName} 건너뛰기`}
@@ -167,3 +182,7 @@ export default function MedicationCard({
     </div>
   );
 }
+
+// React.memo로 감싸서 props가 바뀌지 않으면 리렌더링 방지
+const MedicationCard = memo(MedicationCardInner);
+export default MedicationCard;

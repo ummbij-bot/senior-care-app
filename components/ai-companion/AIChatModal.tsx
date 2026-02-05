@@ -1,6 +1,6 @@
 "use client";
 
-import { X, Send, User, Bot, Trash2 } from "lucide-react";
+import { X, Send, User, Bot, Trash2, Mic, MicOff } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 
 type Message = {
@@ -59,6 +59,15 @@ function saveMessages(messages: Message[]) {
   }
 }
 
+/** Web Speech API STT 지원 여부 확인 */
+function isSpeechRecognitionSupported(): boolean {
+  if (typeof window === "undefined") return false;
+  return !!(
+    (window as unknown as Record<string, unknown>).SpeechRecognition ||
+    (window as unknown as Record<string, unknown>).webkitSpeechRecognition
+  );
+}
+
 type Props = {
   onClose: () => void;
   userName?: string;
@@ -70,12 +79,22 @@ type Props = {
  * - 시간대 기반 인사말
  * - localStorage 대화 기록 저장/복원
  * - 대화 지우기 기능
+ * - 채팅 폰트 20px 이상 고정
+ * - 음성 인식(STT) 버튼 (입력창 옆, 크게 배치)
  */
 export default function AIChatModal({ onClose, userName }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [initialized, setInitialized] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [sttSupported, setSttSupported] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<ReturnType<typeof createRecognition> | null>(null);
+
+  // STT 지원 여부 확인
+  useEffect(() => {
+    setSttSupported(isSpeechRecognitionSupported());
+  }, []);
 
   // 초기화: localStorage에서 기록 로드 + 인사말
   useEffect(() => {
@@ -83,7 +102,6 @@ export default function AIChatModal({ onClose, userName }: Props) {
     if (saved.length > 0) {
       setMessages(saved);
     } else {
-      // 첫 방문: 시간대 인사말
       const greeting: Message = {
         id: "greeting-" + Date.now(),
         role: "assistant",
@@ -114,6 +132,15 @@ export default function AIChatModal({ onClose, userName }: Props) {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
+
+  // 클린업: 컴포넌트 언마운트 시 STT 중단
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch { /* 무시 */ }
+      }
+    };
+  }, []);
 
   const handleSend = useCallback(() => {
     if (!inputValue.trim()) return;
@@ -156,6 +183,60 @@ export default function AIChatModal({ onClose, userName }: Props) {
       // 무시
     }
   };
+
+  /** 음성 인식 시작/중단 토글 */
+  const toggleSTT = useCallback(() => {
+    if (isListening) {
+      // 중단
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+      return;
+    }
+
+    // 시작
+    const recognition = createRecognition();
+    if (!recognition) return;
+
+    recognitionRef.current = recognition;
+    recognition.lang = "ko-KR";
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    recognition.continuous = false;
+
+    recognition.onresult = (event: { results: { transcript: string; isFinal: boolean }[][] }) => {
+      const results = event.results;
+      let transcript = "";
+      let isFinal = false;
+
+      for (let i = 0; i < results.length; i++) {
+        transcript += results[i][0].transcript;
+        if (results[i][0].isFinal) isFinal = true;
+      }
+
+      setInputValue(transcript);
+
+      if (isFinal) {
+        setIsListening(false);
+      }
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    try {
+      recognition.start();
+      setIsListening(true);
+    } catch {
+      setIsListening(false);
+    }
+  }, [isListening]);
 
   const formatTime = (isoString: string) => {
     const date = new Date(isoString);
@@ -208,7 +289,7 @@ export default function AIChatModal({ onClose, userName }: Props) {
         </div>
       </header>
 
-      {/* 메시지 목록 */}
+      {/* 메시지 목록 — 폰트 20px 이상 고정 */}
       <div className="flex-1 overflow-y-auto px-5 py-6">
         <div className="space-y-4">
           {messages.map((msg) => (
@@ -229,7 +310,7 @@ export default function AIChatModal({ onClose, userName }: Props) {
                 )}
               </div>
 
-              {/* 말풍선 */}
+              {/* 말풍선 — 최소 20px 폰트 */}
               <div
                 className={`max-w-[75%] rounded-2xl px-4 py-3 ${
                   msg.role === "user"
@@ -237,7 +318,9 @@ export default function AIChatModal({ onClose, userName }: Props) {
                     : "bg-surface border border-border"
                 }`}
               >
-                <p className="text-lg leading-relaxed">{msg.content}</p>
+                <p style={{ fontSize: "20px", lineHeight: 1.6 }}>
+                  {msg.content}
+                </p>
                 <p
                   className={`mt-1 text-sm ${
                     msg.role === "user"
@@ -254,9 +337,29 @@ export default function AIChatModal({ onClose, userName }: Props) {
         </div>
       </div>
 
-      {/* 입력 영역 */}
+      {/* 입력 영역 — STT 버튼 크게 배치 */}
       <footer className="border-t-2 border-border bg-surface-raised px-5 py-4">
         <div className="flex gap-3">
+          {/* 음성 인식 (STT) 버튼 — 크게 */}
+          {sttSupported && (
+            <button
+              onClick={toggleSTT}
+              className={`flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-xl border-2 transition-colors ${
+                isListening
+                  ? "border-danger bg-red-50 text-danger animate-pulse"
+                  : "border-border bg-surface text-text-muted hover:border-primary hover:text-primary"
+              }`}
+              aria-label={isListening ? "음성 인식 중단" : "음성으로 입력하기"}
+              title={isListening ? "음성 인식 중..." : "음성 입력"}
+            >
+              {isListening ? (
+                <MicOff className="h-6 w-6" strokeWidth={2.2} />
+              ) : (
+                <Mic className="h-6 w-6" strokeWidth={2.2} />
+              )}
+            </button>
+          )}
+
           <input
             type="text"
             value={inputValue}
@@ -267,8 +370,9 @@ export default function AIChatModal({ onClose, userName }: Props) {
                 handleSend();
               }
             }}
-            placeholder="메시지를 입력하세요..."
+            placeholder={isListening ? "말씀해 주세요..." : "메시지를 입력하세요..."}
             className="input-senior flex-1"
+            style={{ fontSize: "20px" }}
             aria-label="메시지 입력"
           />
           <button
@@ -280,7 +384,26 @@ export default function AIChatModal({ onClose, userName }: Props) {
             <Send className="h-6 w-6" strokeWidth={2.2} aria-hidden="true" />
           </button>
         </div>
+        {isListening && (
+          <p className="mt-2 text-center text-base font-medium text-danger animate-pulse">
+            🎤 음성 인식 중... 말씀해 주세요
+          </p>
+        )}
       </footer>
     </div>
   );
+}
+
+/**
+ * Web Speech API SpeechRecognition 인스턴스 생성
+ * 브라우저 호환성 처리 (Chrome: webkitSpeechRecognition)
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function createRecognition(): any | null {
+  if (typeof window === "undefined") return null;
+  const W = window as unknown as Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const SpeechRecognition = (W.SpeechRecognition || W.webkitSpeechRecognition) as any;
+  if (!SpeechRecognition) return null;
+  return new SpeechRecognition();
 }

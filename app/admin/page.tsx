@@ -72,6 +72,7 @@ export default async function AdminPage({
   let payments: Array<{
     id: string;
     toss_order_id: string;
+    toss_payment_key: string | null;
     amount: number;
     status: string;
     method: string | null;
@@ -89,7 +90,7 @@ export default async function AdminPage({
 
     const { data } = await supabase
       .from("payment_history")
-      .select("id, toss_order_id, amount, status, method, description, created_at, user_id")
+      .select("id, toss_order_id, toss_payment_key, amount, status, method, description, created_at, user_id")
       .order("created_at", { ascending: false })
       .range(offset, offset + PAGE_SIZE - 1);
 
@@ -108,6 +109,7 @@ export default async function AdminPage({
       payments = data.map((p) => ({
         id: p.id,
         toss_order_id: p.toss_order_id,
+        toss_payment_key: p.toss_payment_key ?? null,
         amount: p.amount,
         status: p.status,
         method: p.method,

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import {
   ArrowLeft,
   RefreshCw,
@@ -8,22 +9,97 @@ import {
   XCircle,
   SkipForward,
   Activity,
+  BarChart3,
 } from "lucide-react";
 import { useGuardianRealtime } from "@/lib/hooks/useGuardianRealtime";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type Props = {
   seniorId: string;
+};
+
+type DailyReport = {
+  report_date: string;
+  total_count: number;
+  taken_count: number;
+  success_rate: number;
 };
 
 /**
  * 보호자 대시보드
  * - 시니어의 오늘 복약 현황을 실시간 모니터링
  * - Supabase Realtime으로 상태 변경 즉시 반영
- * - 마지막 업데이트 시각 표시
+ * - 지난 7일 주간 복약 리포트 (Progress Bar 시각화)
  */
 export default function GuardianDashboard({ seniorId }: Props) {
   const { senior, logs, loading, stats, lastUpdate, refetch } =
     useGuardianRealtime(seniorId);
+
+  const [weeklyReport, setWeeklyReport] = useState<DailyReport[]>([]);
+  const [reportLoading, setReportLoading] = useState(true);
+
+  // 주간 리포트 조회
+  const fetchWeeklyReport = useCallback(async () => {
+    setReportLoading(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 6);
+
+      const startStr = startDate.toISOString().split("T")[0];
+      const endStr = endDate.toISOString().split("T")[0];
+
+      const { data } = await supabase
+        .from("medication_logs")
+        .select("scheduled_date, status")
+        .eq("user_id", seniorId)
+        .gte("scheduled_date", startStr)
+        .lte("scheduled_date", endStr);
+
+      if (data) {
+        // 7일 빈 데이터 초기화
+        const grouped = new Map<string, { total: number; taken: number }>();
+        for (let i = 0; i < 7; i++) {
+          const d = new Date();
+          d.setDate(d.getDate() - (6 - i));
+          const key = d.toISOString().split("T")[0];
+          grouped.set(key, { total: 0, taken: 0 });
+        }
+
+        data.forEach((log) => {
+          const existing = grouped.get(log.scheduled_date) || { total: 0, taken: 0 };
+          existing.total += 1;
+          if (log.status === "taken") existing.taken += 1;
+          grouped.set(log.scheduled_date, existing);
+        });
+
+        const report: DailyReport[] = [];
+        grouped.forEach((value, key) => {
+          report.push({
+            report_date: key,
+            total_count: value.total,
+            taken_count: value.taken,
+            success_rate: value.total > 0
+              ? Math.round((value.taken / value.total) * 100)
+              : 0,
+          });
+        });
+
+        report.sort((a, b) => a.report_date.localeCompare(b.report_date));
+        setWeeklyReport(report);
+      }
+    } catch (err) {
+      console.error("[주간 리포트] 조회 실패:", err);
+    } finally {
+      setReportLoading(false);
+    }
+  }, [seniorId]);
+
+  useEffect(() => {
+    fetchWeeklyReport();
+  }, [fetchWeeklyReport]);
 
   const formatTime = (time: string) => {
     const [h, m] = time.split(":");
@@ -41,6 +117,23 @@ export default function GuardianDashboard({ seniorId }: Props) {
     const display = h === 0 ? 12 : h > 12 ? h - 12 : h;
     return `${period} ${display}:${m}:${s}`;
   };
+
+  /** 날짜 → "2/4(화)" 형식 */
+  const formatShortDate = (dateStr: string) => {
+    const d = new Date(dateStr + "T00:00:00");
+    const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
+    const month = d.getMonth() + 1;
+    const day = d.getDate();
+    const dayName = dayNames[d.getDay()];
+    return `${month}/${day}(${dayName})`;
+  };
+
+  // 주간 평균 성공률
+  const daysWithData = weeklyReport.filter((r) => r.total_count > 0);
+  const weeklyAverage =
+    daysWithData.length > 0
+      ? Math.round(daysWithData.reduce((sum, r) => sum + r.success_rate, 0) / daysWithData.length)
+      : 0;
 
   const statusConfig = {
     taken: {
@@ -95,7 +188,10 @@ export default function GuardianDashboard({ seniorId }: Props) {
             </div>
           </div>
           <button
-            onClick={() => refetch()}
+            onClick={() => {
+              refetch();
+              fetchWeeklyReport();
+            }}
             className="flex h-12 w-12 items-center justify-center rounded-xl hover:bg-surface"
             aria-label="새로고침"
           >
@@ -135,7 +231,6 @@ export default function GuardianDashboard({ seniorId }: Props) {
                     </p>
                   )}
                 </div>
-                {/* 실시간 표시 배지 */}
                 <div className="flex items-center gap-1.5">
                   <span className="relative flex h-3 w-3">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
@@ -166,6 +261,88 @@ export default function GuardianDashboard({ seniorId }: Props) {
                   <p className="mt-1 text-sm font-medium text-text-secondary">전체</p>
                 </div>
               </div>
+            </section>
+
+            {/* ── 주간 복약 리포트 (Progress Bar) ── */}
+            <section aria-label="주간 복약 리포트">
+              <div className="mb-4 flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" strokeWidth={2} />
+                <h3 className="text-xl font-bold text-text-primary">주간 복약 리포트</h3>
+                {!reportLoading && weeklyAverage > 0 && (
+                  <span
+                    className={`ml-auto rounded-full px-3 py-1 text-sm font-bold ${
+                      weeklyAverage >= 80
+                        ? "bg-emerald-100 text-emerald-700"
+                        : weeklyAverage >= 50
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    평균 {weeklyAverage}%
+                  </span>
+                )}
+              </div>
+
+              {reportLoading ? (
+                <div className="card animate-pulse">
+                  <div className="space-y-3">
+                    {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                      <div key={i} className="h-8 rounded bg-surface" />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="card">
+                  <div className="space-y-3">
+                    {weeklyReport.map((day) => {
+                      const isToday =
+                        day.report_date === new Date().toISOString().split("T")[0];
+                      const rate = day.success_rate;
+                      const barColor =
+                        rate >= 80
+                          ? "bg-emerald-500"
+                          : rate >= 50
+                            ? "bg-amber-500"
+                            : rate > 0
+                              ? "bg-red-400"
+                              : "bg-gray-200";
+
+                      return (
+                        <div key={day.report_date}>
+                          <div className="mb-1 flex items-center justify-between">
+                            <span
+                              className={`text-sm font-medium ${
+                                isToday ? "font-bold text-primary" : "text-text-secondary"
+                              }`}
+                            >
+                              {formatShortDate(day.report_date)}
+                              {isToday && " (오늘)"}
+                            </span>
+                            <span className="text-sm font-bold text-text-primary">
+                              {day.total_count > 0
+                                ? `${day.taken_count}/${day.total_count} (${rate}%)`
+                                : "기록 없음"}
+                            </span>
+                          </div>
+                          {/* Progress Bar */}
+                          <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                              style={{ width: `${day.total_count > 0 ? Math.max(rate, 2) : 0}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {weeklyReport.every((d) => d.total_count === 0) && (
+                    <p className="mt-4 text-center text-base text-text-muted">
+                      최근 7일간 복약 기록이 없습니다
+                    </p>
+                  )}
+                </div>
+              )}
             </section>
 
             {/* ── 타임라인 ── */}

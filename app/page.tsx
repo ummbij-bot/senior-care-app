@@ -159,7 +159,7 @@ export default async function Home() {
       </footer>
 
       {/* AI 손자 플로팅 버튼 */}
-      <FloatingAIButton userName={user.name} />
+      <FloatingAIButton userName={user.name} userId={user.id} />
     </div>
   );
 }

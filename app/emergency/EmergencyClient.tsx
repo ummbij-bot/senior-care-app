@@ -1,11 +1,12 @@
 "use client";
 
-import { Phone, ArrowLeft, AlertTriangle, Heart, Flame, Volume2 } from "lucide-react";
+import { Phone, ArrowLeft, AlertTriangle, Heart, Flame, Volume2, MapPin } from "lucide-react";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { trackEmergencyCall } from "@/lib/analytics";
 
 type Props = {
   guardianPhone: string | null;
+  guardianPushSubscription?: string | null; // JSON string of PushSubscription
 };
 
 /**
@@ -13,13 +14,10 @@ type Props = {
  */
 function speak(text: string) {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
-
-  // 기존 음성 중단
   window.speechSynthesis.cancel();
-
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "ko-KR";
-  utterance.rate = 0.9; // 시니어를 위해 약간 느리게
+  utterance.rate = 0.9;
   utterance.pitch = 1.0;
   utterance.volume = 1.0;
   window.speechSynthesis.speak(utterance);
@@ -35,17 +33,83 @@ function vibrate(pattern: number | number[]) {
 }
 
 /**
+ * GPS 위치를 가져와서 Google Maps 링크 생성
+ */
+function getLocationLink(): Promise<string | null> {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve(null);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const link = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        resolve(link);
+      },
+      () => {
+        // 위치 가져오기 실패 (권한 거부 등)
+        resolve(null);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0,
+      }
+    );
+  });
+}
+
+/**
+ * 보호자에게 위치 포함 긴급 알림 전송 (SMS API)
+ */
+async function sendLocationToGuardian(
+  guardianPhone: string,
+  locationLink: string | null
+) {
+  try {
+    const message = locationLink
+      ? `[시니어케어 긴급] 어르신이 긴급 신고를 하셨습니다. 현재 위치: ${locationLink}`
+      : `[시니어케어 긴급] 어르신이 긴급 신고를 하셨습니다. 위치를 확인할 수 없습니다. 즉시 연락해 주세요.`;
+
+    // 서버 API를 통해 SMS 전송 (rate limiting 포함)
+    await fetch("/api/emergency-notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phone: guardianPhone,
+        message,
+        locationLink,
+      }),
+    });
+  } catch (err) {
+    console.error("[Emergency] 보호자 알림 전송 실패:", err);
+  }
+}
+
+/**
  * 긴급 신고 클라이언트 컴포넌트
  * - 119, 112, 보호자 번호 큰 버튼
  * - 실수 방지를 위한 2단계 확인 (5초 카운트다운)
- * - TTS 음성 안내
- * - 햅틱 피드백
+ * - TTS 음성 안내 + 햅틱 피드백
+ * - GPS 위치 공유 (보호자에게 실시간 지도 링크 전송)
  */
 export default function EmergencyClient({ guardianPhone }: Props) {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number>(5);
+  const [locationLink, setLocationLink] = useState<string | null>(null);
+  const [gpsLoading, setGpsLoading] = useState(false);
 
-  // 긴급 번호 목록 (보호자 번호는 props에서 동적으로)
+  // 페이지 진입 시 바로 GPS 위치 미리 확보
+  useEffect(() => {
+    setGpsLoading(true);
+    getLocationLink().then((link) => {
+      setLocationLink(link);
+      setGpsLoading(false);
+    });
+  }, []);
+
   const emergencyNumbers = useMemo(
     () => [
       {
@@ -104,16 +168,24 @@ export default function EmergencyClient({ guardianPhone }: Props) {
 
   // 전화 걸기 처리
   const handleCall = useCallback(
-    (id: string, tel: string | null, voiceGuide: string) => {
+    async (id: string, tel: string | null, voiceGuide: string) => {
       if (!tel) return;
 
       if (confirmingId === id) {
         // 두 번째 클릭: 실제 전화
-        vibrate([50, 50, 50]); // 연속 진동
+        vibrate([50, 50, 50]);
         speak("전화를 겁니다.");
 
         // GA4 이벤트 추적
         trackEmergencyCall(id as "119" | "112" | "guardian");
+
+        // GPS 위치를 보호자에게 전송 (모든 긴급 전화 시)
+        if (guardianPhone) {
+          // 최신 위치 다시 확보
+          const freshLocation = await getLocationLink();
+          const finalLocation = freshLocation || locationLink;
+          sendLocationToGuardian(guardianPhone, finalLocation);
+        }
 
         // 짧은 딜레이 후 전화 (TTS가 시작할 시간)
         setTimeout(() => {
@@ -123,13 +195,13 @@ export default function EmergencyClient({ guardianPhone }: Props) {
         setConfirmingId(null);
       } else {
         // 첫 번째 클릭: 확인 요청
-        vibrate(100); // 한번 진동
+        vibrate(100);
         speak(voiceGuide);
         setConfirmingId(id);
         setCountdown(5);
       }
     },
-    [confirmingId]
+    [confirmingId, guardianPhone, locationLink]
   );
 
   // 취소 처리
@@ -169,6 +241,18 @@ export default function EmergencyClient({ guardianPhone }: Props) {
           <p className="mt-1 text-base text-amber-700">
             음성으로 안내해 드립니다
           </p>
+        </div>
+
+        {/* GPS 상태 표시 */}
+        <div className="mt-3 flex items-center gap-2 rounded-lg bg-surface px-3 py-2">
+          <MapPin className={`h-4 w-4 ${locationLink ? "text-emerald-500" : gpsLoading ? "text-amber-500 animate-pulse" : "text-text-muted"}`} />
+          <span className="text-sm text-text-secondary">
+            {locationLink
+              ? "위치 확보 완료 — 긴급 시 보호자에게 전송됩니다"
+              : gpsLoading
+                ? "위치 확인 중..."
+                : "위치를 확인할 수 없습니다"}
+          </span>
         </div>
       </div>
 
@@ -229,7 +313,7 @@ export default function EmergencyClient({ guardianPhone }: Props) {
                     </div>
                   ) : (
                     <Phone
-                      className={`h-8 w-8 shrink-0 ${isConfirming ? "text-danger" : "text-text-muted"}`}
+                      className="h-8 w-8 shrink-0 text-text-muted"
                       strokeWidth={2}
                     />
                   )}
